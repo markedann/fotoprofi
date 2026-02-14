@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fal } from "@fal-ai/client";
 
 const IDENTITY_RULES = [
   "ABSOLUTE PRIORITY - FACE IDENTITY PRESERVATION:",
@@ -58,8 +57,137 @@ const LEBENSLAUF_PROMPT = [
   "Photorealistic output. No artistic filters.",
 ].join("\n");
 
-// Max duration for serverless function (Fal.ai image generation can take time)
 export const maxDuration = 120;
+
+const FAL_QUEUE_URL = "https://queue.fal.run/fal-ai/flux-2/flash/edit";
+const FAL_UPLOAD_URL = "https://fal.run/fal-ai/storage/upload/initiate";
+
+async function uploadToFalStorage(file: File, falKey: string): Promise<string> {
+  // Step 1: Initiate upload
+  const initiateRes = await fetch(FAL_UPLOAD_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${falKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file_name: file.name || "photo.jpg",
+      content_type: file.type || "image/jpeg",
+    }),
+  });
+
+  if (!initiateRes.ok) {
+    const errText = await initiateRes.text();
+    console.log("[v0] Upload initiate failed:", initiateRes.status, errText);
+    throw new Error(`Fal upload initiate failed: ${initiateRes.status}`);
+  }
+
+  const { upload_url, file_url } = await initiateRes.json();
+  console.log("[v0] Upload URL received, file_url:", file_url);
+
+  // Step 2: Upload file to the presigned URL
+  const arrayBuffer = await file.arrayBuffer();
+  const uploadRes = await fetch(upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": file.type || "image/jpeg" },
+    body: arrayBuffer,
+  });
+
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text();
+    console.log("[v0] File upload failed:", uploadRes.status, errText);
+    throw new Error(`Fal file upload failed: ${uploadRes.status}`);
+  }
+
+  console.log("[v0] File uploaded successfully to:", file_url);
+  return file_url;
+}
+
+async function submitAndPoll(
+  imageUrl: string,
+  prompt: string,
+  falKey: string
+): Promise<string> {
+  // Submit to queue
+  const submitRes = await fetch(FAL_QUEUE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${falKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      image_urls: [imageUrl],
+      guidance_scale: 3.5,
+      image_size: "square_hd",
+      num_images: 1,
+      output_format: "png",
+      enable_safety_checker: false,
+    }),
+  });
+
+  if (!submitRes.ok) {
+    const errText = await submitRes.text();
+    console.log("[v0] Queue submit failed:", submitRes.status, errText);
+    throw new Error(`Fal queue submit failed (${submitRes.status}): ${errText}`);
+  }
+
+  const { request_id, status: initialStatus, response_url } = await submitRes.json();
+  console.log("[v0] Queue submitted, request_id:", request_id, "status:", initialStatus);
+
+  // If already completed
+  if (initialStatus === "COMPLETED" && response_url) {
+    const resultRes = await fetch(response_url, {
+      headers: { Authorization: `Key ${falKey}` },
+    });
+    const resultData = await resultRes.json();
+    return resultData.images?.[0]?.url;
+  }
+
+  // Poll for result
+  const statusUrl = `https://queue.fal.run/fal-ai/flux-2/flash/edit/requests/${request_id}/status`;
+  const resultUrl = `https://queue.fal.run/fal-ai/flux-2/flash/edit/requests/${request_id}`;
+
+  for (let i = 0; i < 120; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+
+    const statusRes = await fetch(statusUrl, {
+      headers: { Authorization: `Key ${falKey}` },
+    });
+
+    if (!statusRes.ok) {
+      console.log("[v0] Status poll error:", statusRes.status);
+      continue;
+    }
+
+    const statusData = await statusRes.json();
+    console.log("[v0] Poll #" + (i + 1) + " status:", statusData.status);
+
+    if (statusData.status === "COMPLETED") {
+      const resultRes = await fetch(resultUrl, {
+        headers: { Authorization: `Key ${falKey}` },
+      });
+
+      if (!resultRes.ok) {
+        const errText = await resultRes.text();
+        throw new Error(`Fal result fetch failed: ${resultRes.status} ${errText}`);
+      }
+
+      const resultData = await resultRes.json();
+      const generatedUrl = resultData.images?.[0]?.url;
+      if (!generatedUrl) {
+        throw new Error("No image in Fal response");
+      }
+      return generatedUrl;
+    }
+
+    if (statusData.status === "FAILED") {
+      throw new Error("Fal processing failed: " + (statusData.error || "Unknown error"));
+    }
+  }
+
+  throw new Error("Fal processing timed out after 4 minutes");
+}
 
 export async function POST(req: NextRequest) {
   const falKey = process.env.FAL_KEY;
@@ -67,10 +195,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "FAL_KEY nicht gesetzt." }, { status: 500 });
   }
 
-  // Configure credentials per-request to ensure env var is available
-  fal.config({ credentials: falKey });
-
-  console.log("[v0] FAL_KEY present, length:", falKey.length, "starts with:", falKey.slice(0, 8) + "...");
+  console.log("[v0] FAL_KEY present, length:", falKey.length);
 
   try {
     const formDataIn = await req.formData();
@@ -82,46 +207,15 @@ export async function POST(req: NextRequest) {
     const photoType = (formDataIn.get("photoType") as string) || "biometric";
     const prompt = photoType === "lebenslauf" ? LEBENSLAUF_PROMPT : BIOMETRIC_PROMPT;
 
-    console.log("[v0] Photo type:", photoType);
-    console.log("[v0] File size:", Math.round(file.size / 1024), "KB, type:", file.type);
+    console.log("[v0] Photo type:", photoType, "File size:", Math.round(file.size / 1024), "KB");
 
-    // Upload the image to Fal storage to get a URL
-    const imageUrl = await fal.storage.upload(file);
-    console.log("[v0] Image uploaded to Fal storage:", imageUrl);
+    // Step 1: Upload image to Fal storage
+    const imageUrl = await uploadToFalStorage(file, falKey);
 
-    // Use Flux 2 Flash Edit for image-to-image processing
-    const result = await fal.subscribe("fal-ai/flux-2/flash/edit", {
-      input: {
-        prompt,
-        image_urls: [imageUrl],
-        guidance_scale: 3.5,
-        image_size: "square_hd",
-        num_images: 1,
-        output_format: "png",
-        enable_safety_checker: false,
-      },
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === "IN_PROGRESS") {
-          update.logs?.map((log) => log.message).forEach((msg) => console.log("[v0] Fal progress:", msg));
-        }
-      },
-    });
+    // Step 2: Submit for processing and poll for result
+    const generatedImageUrl = await submitAndPoll(imageUrl, prompt, falKey);
 
-    console.log("[v0] Fal result received. Keys:", Object.keys(result.data));
-
-    const images = result.data.images as Array<{ url: string }> | undefined;
-    const generatedImageUrl = images?.[0]?.url;
-
-    if (!generatedImageUrl) {
-      console.log("[v0] No image in result:", JSON.stringify(result.data).slice(0, 500));
-      return NextResponse.json(
-        { error: "Kein Bild in der Antwort gefunden. Bitte erneut versuchen." },
-        { status: 502 }
-      );
-    }
-
-    console.log("[v0] Generated image URL:", generatedImageUrl.slice(0, 100));
+    console.log("[v0] Success! Generated image URL:", generatedImageUrl.slice(0, 80));
     return NextResponse.json({ image: generatedImageUrl });
   } catch (error) {
     console.error("[v0] Error:", error);

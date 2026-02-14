@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fal } from "@fal-ai/client";
 
-// Configure fal client
-fal.config({
-  credentials: process.env.FAL_KEY,
-});
-
 const IDENTITY_RULES = [
   "ABSOLUTE PRIORITY - FACE IDENTITY PRESERVATION:",
   "This is the MOST IMPORTANT rule. The output face MUST be the EXACT SAME person as the input. Every single facial feature must be preserved with pixel-level accuracy:",
@@ -71,6 +66,11 @@ export async function POST(req: NextRequest) {
   if (!falKey) {
     return NextResponse.json({ error: "FAL_KEY nicht gesetzt." }, { status: 500 });
   }
+
+  // Configure credentials per-request to ensure env var is available
+  fal.config({ credentials: falKey });
+
+  console.log("[v0] FAL_KEY present, length:", falKey.length, "starts with:", falKey.slice(0, 8) + "...");
 
   try {
     const formDataIn = await req.formData();

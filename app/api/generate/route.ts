@@ -64,10 +64,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Trim whitespace/newlines that may have been pasted with the key
-  const falKey = rawKey.trim();
+  // Strip any leading dots, whitespace, or invisible chars that got pasted with the key
+  const falKey = rawKey.trim().replace(/^[.\s]+/, "").replace(/[.\s]+$/, "");
 
-  console.log("[v0] FAL_KEY debug — length:", falKey.length, "| first 10 chars:", JSON.stringify(falKey.slice(0, 10)), "| last 5 chars:", JSON.stringify(falKey.slice(-5)), "| contains colon:", falKey.includes(":"));
+  console.log("[v0] FAL_KEY debug — length:", falKey.length, "| first 10 chars:", JSON.stringify(falKey.slice(0, 10)), "| last 5 chars:", JSON.stringify(falKey.slice(-5)));
 
   try {
     const formData = await req.formData();

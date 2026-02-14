@@ -6,7 +6,7 @@ export async function GET() {
     return NextResponse.json({ error: "FAL_KEY not set" });
   }
 
-  const falKey = rawKey.trim();
+  const falKey = rawKey.trim().replace(/^[.\s]+/, "").replace(/[.\s]+$/, "");
 
   const debug = {
     keyLength: falKey.length,

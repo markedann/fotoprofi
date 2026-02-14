@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 /* ───────────────────────────── Prompts ───────────────────────────── */
 
 const BIOMETRIC_PROMPT =
-  "Professional biometric passport photo of the person in image_url. Photorealistic, high detail, sharp focus. Clean-shaven face, no facial hair, no beard, no mustache. Neutral facial expression. Dark navy formal suit jacket, white dress shirt, dark tie. Solid plain light grey background. Natural studio lighting. 8k resolution. Realism. No anime style. No illustration. No artistic filters.";
+  "Transform this selfie into a professional German biometric passport photo. Same person, same face, same eyes, same skin tone. Remove all facial hair completely, clean shaven. Wearing dark navy suit jacket, white dress shirt, dark tie. Solid plain light grey background with no shadows. Soft even studio lighting. Neutral expression, mouth closed, eyes open, looking straight at camera. Head centered, passport crop framing. Photorealistic photograph, not illustration, not painting, not anime. 8k resolution, sharp focus, studio quality.";
 
 const LEBENSLAUF_PROMPT =
-  "Professional business headshot portrait of the person in image_url. Photorealistic, high detail, sharp focus. Keep all facial hair exactly as-is. Friendly confident expression, slight smile. Dark navy formal suit jacket, white dress shirt, dark tie. Clean neutral soft gradient background. Soft flattering studio lighting. 8k resolution. Realism. No anime style. No illustration. No artistic filters.";
+  "Transform this selfie into a professional German business headshot for a CV. Same person, same face, same eyes, same skin tone. Keep all facial hair exactly as-is. Wearing dark navy suit jacket, white dress shirt, dark tie. Clean neutral soft grey gradient background. Soft flattering studio lighting. Friendly confident expression, slight smile, eyes open, looking at camera. Head and shoulders framing. Photorealistic photograph, not illustration, not painting, not anime. 8k resolution, sharp focus, studio quality.";
 
 /* ────────────────────────── API Handler ──────────────────────────── */
 
@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
       "KB"
     );
 
-    // strength 0.35 = preserve the original face realistically, only adjust styling
+    // strength 0.65 = enough to transform background, clothing, lighting
+    // guidance_scale 7.0 = strongly follow the prompt for photorealism
     const response = await fetch(FAL_RUN_URL, {
       method: "POST",
       headers: {
@@ -67,10 +68,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         prompt,
         image_url: dataUri,
-        strength: 0.35,
+        strength: 0.65,
         image_size: { width: 900, height: 1200 },
-        num_inference_steps: 28,
-        guidance_scale: 3.5,
+        num_inference_steps: 40,
+        guidance_scale: 7.0,
         num_images: 1,
         output_format: "png",
         enable_safety_checker: false,

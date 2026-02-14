@@ -56,13 +56,18 @@ export const maxDuration = 120;
 const FAL_RUN_URL = "https://fal.run/fal-ai/flux/dev/image-to-image";
 
 export async function POST(req: NextRequest) {
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) {
+  const rawKey = process.env.FAL_KEY;
+  if (!rawKey) {
     return NextResponse.json(
       { error: "FAL_KEY nicht gesetzt." },
       { status: 500 }
     );
   }
+
+  // Trim whitespace/newlines that may have been pasted with the key
+  const falKey = rawKey.trim();
+
+  console.log("[v0] FAL_KEY debug — length:", falKey.length, "| first 10 chars:", JSON.stringify(falKey.slice(0, 10)), "| last 5 chars:", JSON.stringify(falKey.slice(-5)), "| contains colon:", falKey.includes(":"));
 
   try {
     const formData = await req.formData();

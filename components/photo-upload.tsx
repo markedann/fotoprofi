@@ -1,18 +1,143 @@
 "use client";
 
-import { forwardRef, useCallback, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import {
   Upload,
   X,
-  Loader2,
   Download,
   RotateCcw,
   CheckCircle2,
   AlertCircle,
   Camera,
+  Sparkles,
+  User,
+  Shirt,
+  ImageIcon,
 } from "lucide-react";
 
 type Status = "idle" | "preview" | "loading" | "done" | "error";
+
+const processingSteps = [
+  { icon: User, label: "Gesicht wird erkannt...", duration: 8 },
+  { icon: ImageIcon, label: "Hintergrund wird entfernt...", duration: 12 },
+  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 15 },
+  { icon: Sparkles, label: "Beleuchtung wird optimiert...", duration: 10 },
+  { icon: Camera, label: "Biometrisches Format wird angepasst...", duration: 10 },
+  { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 5 },
+];
+
+function GenerationTimer() {
+  const [elapsed, setElapsed] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsed((prev) => prev + 0.1);
+    }, 100);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let accumulated = 0;
+    for (let i = 0; i < processingSteps.length; i++) {
+      accumulated += processingSteps[i].duration;
+      if (elapsed < accumulated) {
+        setCurrentStep(i);
+        return;
+      }
+    }
+    setCurrentStep(processingSteps.length - 1);
+  }, [elapsed]);
+
+  const totalDuration = processingSteps.reduce((s, step) => s + step.duration, 0);
+  const progressPercent = Math.min((elapsed / totalDuration) * 100, 95);
+
+  const StepIcon = processingSteps[currentStep].icon;
+
+  return (
+    <div className="flex flex-col items-center px-6 py-16 md:px-8 md:py-20">
+      {/* Animated circle */}
+      <div className="relative mb-8">
+        <svg className="h-28 w-28" viewBox="0 0 120 120">
+          <circle
+            cx="60"
+            cy="60"
+            r="52"
+            fill="none"
+            stroke="hsl(var(--border))"
+            strokeWidth="6"
+          />
+          <circle
+            cx="60"
+            cy="60"
+            r="52"
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 52}`}
+            strokeDashoffset={`${2 * Math.PI * 52 * (1 - progressPercent / 100)}`}
+            transform="rotate(-90 60 60)"
+            className="transition-all duration-300"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <StepIcon className="h-6 w-6 text-primary" />
+          <span className="mt-1 text-xs font-semibold text-muted-foreground">
+            {Math.round(progressPercent)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Current step label */}
+      <p className="mb-2 text-center text-base font-semibold text-foreground animate-fade-in-up">
+        {processingSteps[currentStep].label}
+      </p>
+      <p className="mb-8 text-center text-sm text-muted-foreground">
+        {Math.round(elapsed)} Sek. vergangen
+      </p>
+
+      {/* Steps list */}
+      <div className="w-full max-w-xs space-y-2">
+        {processingSteps.map((step, i) => {
+          const isCompleted = i < currentStep;
+          const isActive = i === currentStep;
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
+                isActive
+                  ? "bg-primary/10 text-foreground font-medium"
+                  : isCompleted
+                  ? "text-muted-foreground/60"
+                  : "text-muted-foreground/40"
+              }`}
+            >
+              <div
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ${
+                  isCompleted
+                    ? "bg-accent text-accent-foreground"
+                    : isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : (
+                  <span className="text-[10px] font-bold">{i + 1}</span>
+                )}
+              </div>
+              <span className={isCompleted ? "line-through" : ""}>
+                {step.label.replace("...", "")}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
   _,
@@ -149,22 +274,21 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
   };
 
   return (
-    <section id="upload" className="relative px-4 py-20 md:py-28" ref={ref}>
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="animate-blob absolute -left-20 bottom-0 h-72 w-72 bg-pink-100/40 blur-3xl" />
-      </div>
-
+    <section id="upload" className="relative px-4 py-16 md:py-24" ref={ref}>
       <div className="mx-auto max-w-2xl">
         <div className="mb-10 text-center">
-          <h2 className="text-balance text-4xl font-extrabold tracking-tight text-gray-900 md:text-5xl">
-            Foto <span className="text-pink-500">hochladen</span>
+          <span className="mb-3 inline-block rounded-md bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+            Upload
+          </span>
+          <h2 className="text-balance font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            Foto <span className="text-primary">hochladen</span>
           </h2>
-          <p className="mt-4 text-lg text-gray-500">
+          <p className="mt-3 text-base text-muted-foreground">
             Lade dein Selfie hoch und erhalte ein professionelles Passfoto.
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-[2rem] border-2 border-pink-200/60 bg-white shadow-2xl shadow-pink-100/40">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
           {/* Idle / Drop Zone */}
           {status === "idle" && (
             <div
@@ -175,20 +299,20 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`flex cursor-pointer flex-col items-center justify-center px-8 py-24 transition-all ${
+              className={`flex cursor-pointer flex-col items-center justify-center px-8 py-20 transition-all ${
                 dragActive
-                  ? "bg-pink-50"
-                  : "hover:bg-pink-50/50"
+                  ? "bg-primary/5"
+                  : "hover:bg-secondary/50"
               }`}
             >
-              <div className="animate-float mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-xl shadow-pink-200/50">
-                <Camera className="h-9 w-9" />
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Upload className="h-7 w-7" />
               </div>
-              <p className="mb-2 text-lg font-bold text-gray-800">
+              <p className="mb-1.5 text-base font-semibold text-foreground">
                 Foto hierher ziehen oder klicken
               </p>
-              <p className="text-sm text-gray-400">
-                JPG, PNG oder WebP - max. 10 MB
+              <p className="text-sm text-muted-foreground">
+                JPG, PNG oder WebP &mdash; max. 10 MB
               </p>
               <input
                 ref={fileInputRef}
@@ -205,8 +329,8 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
 
           {/* Preview */}
           {status === "preview" && originalUrl && (
-            <div className="p-8">
-              <div className="relative mx-auto mb-8 aspect-[3/4] w-full max-w-xs overflow-hidden rounded-3xl bg-pink-50 ring-4 ring-pink-100">
+            <div className="p-6 md:p-8">
+              <div className="relative mx-auto mb-6 aspect-[3/4] w-full max-w-xs overflow-hidden rounded-xl border border-border bg-secondary">
                 <img
                   src={originalUrl}
                   alt="Hochgeladenes Foto"
@@ -214,7 +338,7 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
                 />
                 <button
                   onClick={handleReset}
-                  className="absolute right-3 top-3 rounded-full bg-white/80 p-2 text-gray-600 shadow-lg backdrop-blur-sm transition-colors hover:bg-white hover:text-gray-900"
+                  className="absolute right-2.5 top-2.5 rounded-lg bg-card/80 p-1.5 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-card hover:text-foreground"
                   aria-label="Entfernen"
                 >
                   <X className="h-4 w-4" />
@@ -222,46 +346,32 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
               </div>
               <button
                 onClick={handleGenerate}
-                className="w-full rounded-full bg-gradient-to-r from-pink-500 to-rose-400 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-pink-300/30 transition-all hover:shadow-2xl hover:shadow-pink-400/40 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-base font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
+                <Sparkles className="h-4.5 w-4.5" />
                 Passfoto generieren
               </button>
             </div>
           )}
 
-          {/* Loading */}
-          {status === "loading" && (
-            <div className="flex flex-col items-center justify-center px-8 py-24">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 animate-ping rounded-full bg-pink-200/50" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              </div>
-              <p className="mb-2 text-lg font-bold text-gray-800">
-                Dein Foto wird verarbeitet...
-              </p>
-              <p className="text-sm text-gray-400">
-                Dies kann bis zu 60 Sekunden dauern.
-              </p>
-            </div>
-          )}
+          {/* Loading - Interactive Timer */}
+          {status === "loading" && <GenerationTimer />}
 
           {/* Done */}
           {status === "done" && resultUrl && (
-            <div className="p-8">
-              <div className="mb-5 flex items-center justify-center gap-2 text-base font-bold text-emerald-500">
-                <CheckCircle2 className="h-5 w-5" />
+            <div className="p-6 md:p-8">
+              <div className="mb-5 flex items-center justify-center gap-2 text-sm font-semibold text-accent">
+                <CheckCircle2 className="h-4.5 w-4.5" />
                 Dein Passfoto ist fertig!
               </div>
 
-              <div className="mb-8 grid grid-cols-2 gap-6">
+              <div className="mb-6 grid grid-cols-2 gap-4">
                 {originalUrl && (
                   <div>
-                    <p className="mb-3 text-center text-xs font-bold uppercase tracking-widest text-gray-400">
+                    <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                       Vorher
                     </p>
-                    <div className="aspect-[3/4] overflow-hidden rounded-3xl bg-pink-50 ring-2 ring-pink-100">
+                    <div className="aspect-[3/4] overflow-hidden rounded-xl border border-border bg-secondary">
                       <img
                         src={originalUrl}
                         alt="Originalbild"
@@ -271,10 +381,10 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
                   </div>
                 )}
                 <div>
-                  <p className="mb-3 text-center text-xs font-bold uppercase tracking-widest text-gray-400">
+                  <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Nachher
                   </p>
-                  <div className="aspect-[3/4] overflow-hidden rounded-3xl bg-emerald-50 ring-2 ring-emerald-200">
+                  <div className="aspect-[3/4] overflow-hidden rounded-xl border border-accent/30 bg-accent/5">
                     <img
                       src={resultUrl}
                       alt="Generiertes Passfoto"
@@ -284,19 +394,19 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <button
                   onClick={handleDownload}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-400 px-6 py-3.5 text-base font-bold text-white shadow-xl shadow-pink-300/30 transition-all hover:shadow-2xl active:scale-[0.98]"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98]"
                 >
-                  <Download className="h-5 w-5" />
+                  <Download className="h-4 w-4" />
                   Herunterladen
                 </button>
                 <button
                   onClick={handleReset}
-                  className="flex items-center justify-center gap-2 rounded-full border-2 border-pink-200 px-6 py-3.5 text-base font-bold text-gray-700 transition-all hover:border-pink-300 hover:bg-pink-50"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border px-5 py-3 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-3.5 w-3.5" />
                   Neu
                 </button>
               </div>
@@ -305,19 +415,19 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
 
           {/* Error */}
           {status === "error" && (
-            <div className="flex flex-col items-center justify-center px-8 py-20">
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-red-50 text-red-500">
-                <AlertCircle className="h-8 w-8" />
+            <div className="flex flex-col items-center justify-center px-6 py-16 md:px-8">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                <AlertCircle className="h-7 w-7" />
               </div>
-              <p className="mb-2 text-lg font-bold text-gray-800">
+              <p className="mb-1.5 text-base font-semibold text-foreground">
                 Fehler aufgetreten
               </p>
-              <p className="mb-8 max-w-sm text-center text-sm text-gray-500">
+              <p className="mb-6 max-w-sm text-center text-sm text-muted-foreground">
                 {error}
               </p>
               <button
                 onClick={handleReset}
-                className="rounded-full bg-gradient-to-r from-pink-500 to-rose-400 px-10 py-3.5 text-base font-bold text-white shadow-lg shadow-pink-300/30 transition-all hover:shadow-xl active:scale-[0.98]"
+                className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
                 Erneut versuchen
               </button>

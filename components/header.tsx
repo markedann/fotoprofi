@@ -1,38 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 export function Header({ onScrollToUpload }: { onScrollToUpload: () => void }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
-    <header className="sticky top-0 z-50 border-b-2 border-pink-200/60 bg-white/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 lg:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-lg shadow-pink-300/40">
-            <Camera className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <Camera className="h-4.5 w-4.5" />
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-gray-800">
-            Foto<span className="text-pink-500">Profi</span>
+          <span className="font-display text-xl font-bold tracking-tight text-foreground">
+            Foto<span className="text-primary">Profi</span>
           </span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-bold text-gray-500 md:flex">
-          <a href="/#features" className="transition-colors hover:text-pink-500">
+
+        <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
+          <a href="/#features" className="transition-colors hover:text-foreground">
             Vorteile
           </a>
-          <a href="/#how-it-works" className="transition-colors hover:text-pink-500">
-            So funktioniert{"'"}s
+          <a href="/#how-it-works" className="transition-colors hover:text-foreground">
+            {"So funktioniert's"}
           </a>
-          <a href="/#faq" className="transition-colors hover:text-pink-500">
+          <a href="/#faq" className="transition-colors hover:text-foreground">
             FAQ
           </a>
         </nav>
-        <button
-          onClick={onScrollToUpload}
-          className="rounded-full bg-gradient-to-r from-pink-500 to-rose-400 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-pink-300/40 transition-all hover:shadow-xl hover:shadow-pink-300/50 active:scale-95"
-        >
-          Foto erstellen
-        </button>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onScrollToUpload}
+            className="hidden rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.97] sm:block"
+          >
+            Foto erstellen
+          </button>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary md:hidden"
+            aria-label="Menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
+
+      {mobileOpen && (
+        <div className="border-t border-border/60 bg-card px-4 pb-4 pt-2 md:hidden">
+          <nav className="flex flex-col gap-1">
+            <a
+              href="/#features"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              Vorteile
+            </a>
+            <a
+              href="/#how-it-works"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {"So funktioniert's"}
+            </a>
+            <a
+              href="/#faq"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              FAQ
+            </a>
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                onScrollToUpload();
+              }}
+              className="mt-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              Foto erstellen
+            </button>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -35,36 +35,43 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="px-4 py-20 md:py-28">
+    <section id="faq" className="px-4 py-16 md:py-24">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-12 text-center">
-          <h2 className="text-balance text-4xl font-extrabold tracking-tight text-gray-900 md:text-5xl">
-            Haeufig gestellte <span className="text-pink-500">Fragen</span>
+        <div className="mb-10 text-center">
+          <span className="mb-3 inline-block rounded-md bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+            FAQ
+          </span>
+          <h2 className="text-balance font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            Haeufig gestellte <span className="text-primary">Fragen</span>
           </h2>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {faqs.map((faq, i) => (
             <div
               key={i}
-              className={`overflow-hidden rounded-3xl border-2 bg-white transition-all ${
+              className={`overflow-hidden rounded-xl border transition-all ${
                 openIndex === i
-                  ? "border-pink-300 shadow-lg shadow-pink-100/40"
-                  : "border-pink-100/60 hover:border-pink-200"
+                  ? "border-primary/30 bg-card shadow-sm"
+                  : "border-border bg-card hover:border-primary/20"
               }`}
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="flex w-full items-center justify-between px-6 py-5 text-left"
+                className="flex w-full items-center justify-between px-5 py-4 text-left"
               >
-                <span className="pr-4 text-base font-bold text-gray-800">
+                <span className="pr-4 text-sm font-semibold text-foreground">
                   {faq.question}
                 </span>
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all ${
-                  openIndex === i ? "bg-pink-500 text-white" : "bg-pink-100 text-pink-500"
-                }`}>
+                <div
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all ${
+                    openIndex === i
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
                   <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
+                    className={`h-3.5 w-3.5 transition-transform ${
                       openIndex === i ? "rotate-180" : ""
                     }`}
                   />
@@ -78,7 +85,7 @@ export function FAQ() {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <p className="px-6 pb-5 text-sm leading-relaxed text-gray-500">
+                  <p className="px-5 pb-4 text-sm leading-relaxed text-muted-foreground">
                     {faq.answer}
                   </p>
                 </div>

@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from 'next'
-import { Nunito } from 'next/font/google'
+import { Inter, DM_Sans } from 'next/font/google'
 
 import './globals.css'
 
-const nunito = Nunito({ subsets: ['latin'], variable: '--font-nunito' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans', weight: ['400', '500', '600', '700'] })
 
 export const metadata: Metadata = {
-  title: 'FotoProfi - Kostenlose Passfotos mit KI',
+  title: 'FotoProfi - Professionelle Passfotos mit KI',
   description:
     'Erstellen Sie professionelle Passfotos, Bewerbungsfotos und Dokumentenfotos kostenlos mit KI. Einfach Selfie hochladen und sofort ein biometrisches Foto erhalten.',
 }
 
 export const viewport: Viewport = {
-  themeColor: '#E84393',
+  themeColor: '#2B5EA7',
 }
 
 export default function RootLayout({
@@ -22,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de">
-      <body className={`${nunito.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${inter.variable} ${dmSans.variable} font-sans antialiased`}>{children}</body>
     </html>
   )
 }

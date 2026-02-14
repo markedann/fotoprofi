@@ -3,39 +3,39 @@ import { Camera } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t-2 border-pink-100 bg-white px-4 py-10">
+    <footer className="border-t border-border bg-card px-4 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-md shadow-pink-200/40">
-            <Camera className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Camera className="h-3.5 w-3.5" />
           </div>
-          <span className="text-sm font-extrabold text-gray-800">
-            Foto<span className="text-pink-500">Profi</span>
+          <span className="font-display text-sm font-bold text-foreground">
+            Foto<span className="text-primary">Profi</span>
           </span>
         </div>
 
-        <nav className="flex flex-wrap items-center justify-center gap-6 text-sm font-semibold">
+        <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
           <Link
             href="/impressum"
-            className="text-gray-500 transition-colors hover:text-pink-500"
+            className="font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Impressum
           </Link>
           <Link
             href="/datenschutz"
-            className="text-gray-500 transition-colors hover:text-pink-500"
+            className="font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Datenschutzerklaerung
           </Link>
           <a
             href="#faq"
-            className="text-gray-500 transition-colors hover:text-pink-500"
+            className="font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             FAQ
           </a>
         </nav>
 
-        <div className="text-center text-xs text-gray-400">
+        <div className="text-center text-xs text-muted-foreground">
           <p>
             Kostenloser Service zur Erstellung professioneller Passfotos mit KI.
           </p>

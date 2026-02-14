@@ -13,20 +13,53 @@ import {
   User,
   Shirt,
   ImageIcon,
+  FileCheck,
+  Briefcase,
 } from "lucide-react";
 
 type Status = "idle" | "preview" | "loading" | "done" | "error";
+type PhotoType = "biometric" | "lebenslauf";
 
-const processingSteps = [
-  { icon: User, label: "Gesicht wird erkannt...", duration: 8 },
-  { icon: ImageIcon, label: "Hintergrund wird entfernt...", duration: 12 },
-  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 15 },
-  { icon: Sparkles, label: "Beleuchtung wird optimiert...", duration: 10 },
-  { icon: Camera, label: "Biometrisches Format wird angepasst...", duration: 10 },
+const photoTypeOptions: {
+  value: PhotoType;
+  label: string;
+  description: string;
+  icon: typeof Camera;
+}[] = [
+  {
+    value: "biometric",
+    label: "Biometrisches Passfoto",
+    description: "Fuer Reisepass, Personalausweis, Fuehrerschein. Bart wird automatisch entfernt.",
+    icon: FileCheck,
+  },
+  {
+    value: "lebenslauf",
+    label: "Bewerbungsfoto",
+    description: "Fuer Lebenslauf & Bewerbungen. Natuerliches, professionelles Erscheinungsbild.",
+    icon: Briefcase,
+  },
+];
+
+const biometricSteps = [
+  { icon: User, label: "Gesicht wird erkannt...", duration: 7 },
+  { icon: ImageIcon, label: "Hintergrund wird entfernt...", duration: 10 },
+  { icon: Sparkles, label: "Gesichtsbehaarung wird entfernt...", duration: 10 },
+  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 12 },
+  { icon: Camera, label: "Beleuchtung wird optimiert...", duration: 8 },
+  { icon: FileCheck, label: "Biometrisches Format wird angepasst...", duration: 8 },
   { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 5 },
 ];
 
-function GenerationTimer() {
+const lebenslaufSteps = [
+  { icon: User, label: "Gesicht wird erkannt...", duration: 7 },
+  { icon: ImageIcon, label: "Hintergrund wird angepasst...", duration: 10 },
+  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 12 },
+  { icon: Sparkles, label: "Beleuchtung wird optimiert...", duration: 10 },
+  { icon: Camera, label: "Professionelles Framing wird angepasst...", duration: 8 },
+  { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 5 },
+];
+
+function GenerationTimer({ steps }: { steps: typeof biometricSteps }) {
   const [elapsed, setElapsed] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -39,20 +72,20 @@ function GenerationTimer() {
 
   useEffect(() => {
     let accumulated = 0;
-    for (let i = 0; i < processingSteps.length; i++) {
-      accumulated += processingSteps[i].duration;
+    for (let i = 0; i < steps.length; i++) {
+      accumulated += steps[i].duration;
       if (elapsed < accumulated) {
         setCurrentStep(i);
         return;
       }
     }
-    setCurrentStep(processingSteps.length - 1);
-  }, [elapsed]);
+    setCurrentStep(steps.length - 1);
+  }, [elapsed, steps]);
 
-  const totalDuration = processingSteps.reduce((s, step) => s + step.duration, 0);
+  const totalDuration = steps.reduce((s, step) => s + step.duration, 0);
   const progressPercent = Math.min((elapsed / totalDuration) * 100, 95);
 
-  const StepIcon = processingSteps[currentStep].icon;
+  const StepIcon = steps[currentStep].icon;
 
   return (
     <div className="flex flex-col items-center px-6 py-16 md:px-8 md:py-20">
@@ -91,7 +124,7 @@ function GenerationTimer() {
 
       {/* Current step label */}
       <p className="mb-2 text-center text-base font-semibold text-foreground animate-fade-in-up">
-        {processingSteps[currentStep].label}
+        {steps[currentStep].label}
       </p>
       <p className="mb-8 text-center text-sm text-muted-foreground">
         {Math.round(elapsed)} Sek. vergangen
@@ -99,7 +132,7 @@ function GenerationTimer() {
 
       {/* Steps list */}
       <div className="w-full max-w-xs space-y-2">
-        {processingSteps.map((step, i) => {
+        {steps.map((step, i) => {
           const isCompleted = i < currentStep;
           const isActive = i === currentStep;
           return (
@@ -144,6 +177,7 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
   ref
 ) {
   const [status, setStatus] = useState<Status>("idle");
+  const [photoType, setPhotoType] = useState<PhotoType>("biometric");
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -216,6 +250,7 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
       const compressed = await compressImage(fileRef.current);
       const formData = new FormData();
       formData.append("image", compressed, "photo.jpg");
+      formData.append("photoType", photoType);
 
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -249,17 +284,19 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
     setError(null);
     fileRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
+    // photoType is preserved on reset
   };
 
   const handleDownload = async () => {
     if (!resultUrl) return;
+    const filename = photoType === "biometric" ? "passfoto-biometrisch.png" : "bewerbungsfoto.png";
     try {
       const response = await fetch(resultUrl);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "passfoto.png";
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -267,7 +304,7 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
     } catch {
       const a = document.createElement("a");
       a.href = resultUrl;
-      a.download = "passfoto.png";
+      a.download = filename;
       a.target = "_blank";
       a.click();
     }
@@ -291,45 +328,125 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
           {/* Idle / Drop Zone */}
           {status === "idle" && (
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`flex cursor-pointer flex-col items-center justify-center px-8 py-20 transition-all ${
-                dragActive
-                  ? "bg-primary/5"
-                  : "hover:bg-secondary/50"
-              }`}
-            >
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Upload className="h-7 w-7" />
+            <div className="flex flex-col">
+              {/* Photo Type Selector */}
+              <div className="border-b border-border px-6 py-5 md:px-8 md:py-6">
+                <p className="mb-3 text-sm font-semibold text-foreground">
+                  Welches Foto brauchst du?
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {photoTypeOptions.map((option) => {
+                    const isSelected = photoType === option.value;
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setPhotoType(option.value)}
+                        className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border bg-card hover:border-muted-foreground/30 hover:bg-secondary/50"
+                        }`}
+                      >
+                        <div
+                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-muted-foreground"
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-sm font-semibold leading-tight ${
+                              isSelected ? "text-primary" : "text-foreground"
+                            }`}
+                          >
+                            {option.label}
+                          </p>
+                          <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                            {option.description}
+                          </p>
+                        </div>
+                        <div
+                          className={`ml-auto mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground/30 bg-card"
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="h-2 w-2 rounded-full bg-primary-foreground" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {photoType === "biometric" && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg bg-accent/10 px-3 py-2.5">
+                    <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                    <p className="text-xs leading-relaxed text-accent">
+                      <span className="font-semibold">Hinweis:</span> Bei biometrischen Fotos wird Gesichtsbehaarung (Bart) automatisch entfernt, um den offiziellen Anforderungen zu entsprechen.
+                    </p>
+                  </div>
+                )}
               </div>
-              <p className="mb-1.5 text-base font-semibold text-foreground">
-                Foto hierher ziehen oder klicken
-              </p>
-              <p className="text-sm text-muted-foreground">
-                JPG, PNG oder WebP &mdash; max. 10 MB
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFile(file);
+
+              {/* Drop Zone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragActive(true);
                 }}
-              />
+                onDragLeave={() => setDragActive(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex cursor-pointer flex-col items-center justify-center px-8 py-16 transition-all ${
+                  dragActive
+                    ? "bg-primary/5"
+                    : "hover:bg-secondary/50"
+                }`}
+              >
+                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Upload className="h-7 w-7" />
+                </div>
+                <p className="mb-1.5 text-base font-semibold text-foreground">
+                  Foto hierher ziehen oder klicken
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  JPG, PNG oder WebP &mdash; max. 10 MB
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFile(file);
+                  }}
+                />
+              </div>
             </div>
           )}
 
           {/* Preview */}
           {status === "preview" && originalUrl && (
             <div className="p-6 md:p-8">
+              {/* Selected type badge */}
+              <div className="mb-4 flex items-center justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {photoType === "biometric" ? (
+                    <><FileCheck className="h-3 w-3" /> Biometrisches Passfoto</>
+                  ) : (
+                    <><Briefcase className="h-3 w-3" /> Bewerbungsfoto</>
+                  )}
+                </span>
+              </div>
               <div className="relative mx-auto mb-6 aspect-[3/4] w-full max-w-xs overflow-hidden rounded-xl border border-border bg-secondary">
                 <img
                   src={originalUrl}
@@ -349,20 +466,31 @@ export const PhotoUpload = forwardRef<HTMLDivElement>(function PhotoUpload(
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-base font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
                 <Sparkles className="h-4.5 w-4.5" />
-                Passfoto generieren
+                {photoType === "biometric" ? "Passfoto generieren" : "Bewerbungsfoto generieren"}
               </button>
             </div>
           )}
 
           {/* Loading - Interactive Timer */}
-          {status === "loading" && <GenerationTimer />}
+          {status === "loading" && (
+            <GenerationTimer steps={photoType === "biometric" ? biometricSteps : lebenslaufSteps} />
+          )}
 
           {/* Done */}
           {status === "done" && resultUrl && (
             <div className="p-6 md:p-8">
+              <div className="mb-2 flex items-center justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {photoType === "biometric" ? (
+                    <><FileCheck className="h-3 w-3" /> Biometrisches Passfoto</>
+                  ) : (
+                    <><Briefcase className="h-3 w-3" /> Bewerbungsfoto</>
+                  )}
+                </span>
+              </div>
               <div className="mb-5 flex items-center justify-center gap-2 text-sm font-semibold text-accent">
                 <CheckCircle2 className="h-4.5 w-4.5" />
-                Dein Passfoto ist fertig!
+                {photoType === "biometric" ? "Dein Passfoto ist fertig!" : "Dein Bewerbungsfoto ist fertig!"}
               </div>
 
               <div className="mb-6 grid grid-cols-2 gap-4">

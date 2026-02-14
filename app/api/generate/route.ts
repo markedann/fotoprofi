@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROMPT = [
-  "You are a professional photo retoucher. Your task: take this person's photo and create a German biometric passport photo (35x45mm).",
-  "",
+const IDENTITY_RULES = [
   "ABSOLUTE PRIORITY - FACE IDENTITY PRESERVATION:",
   "This is the MOST IMPORTANT rule. The output face MUST be the EXACT SAME person as the input. Every single facial feature must be preserved with pixel-level accuracy:",
   "- Exact same eye shape, eye color, eye spacing, and eye size",
@@ -11,9 +9,17 @@ const PROMPT = [
   "- Exact same jawline, chin shape, and face width",
   "- Exact same forehead shape and size",
   "- Exact same skin tone, skin texture, moles, wrinkles, and marks",
-  "- Exact same facial hair pattern - same beard shape, density, and color",
   "- Exact same eyebrow shape and thickness",
   "If the output face does not look like the same person, the result is a FAILURE.",
+].join("\n");
+
+const BIOMETRIC_PROMPT = [
+  "You are a professional photo retoucher. Your task: take this person's photo and create a German biometric passport photo (35x45mm).",
+  "",
+  IDENTITY_RULES,
+  "",
+  "FACIAL HAIR - MANDATORY REMOVAL:",
+  "If the person has any facial hair (beard, mustache, goatee, stubble, any facial hair at all), you MUST completely remove it. The face must be perfectly clean-shaven. Show the natural skin underneath as if the person never had facial hair. The chin, jawline, upper lip, and cheeks must be completely smooth and hair-free. This is a strict biometric requirement.",
   "",
   "HAIR: Gently neaten the existing hairstyle. Only smooth out flyaways and minor messiness. Keep the exact same hair color, length, thickness, and general style. Do NOT change the hairstyle dramatically.",
   "",
@@ -25,7 +31,28 @@ const PROMPT = [
   "",
   "FRAMING: Passport crop - head centered, face fills 70-80% of height, straight posture.",
   "",
-  "EXPRESSION: Keep the natural expression. Mouth closed, eyes open, looking at camera.",
+  "EXPRESSION: Neutral expression. Mouth closed, eyes open, looking directly at camera.",
+  "",
+  "Output one photorealistic image. No artistic filters. Generate the image now.",
+].join("\n");
+
+const LEBENSLAUF_PROMPT = [
+  "You are a professional photo retoucher. Your task: take this person's photo and create a professional German Bewerbungsfoto (application/CV photo).",
+  "",
+  IDENTITY_RULES,
+  "- Exact same facial hair pattern - same beard shape, density, and color. Keep the beard exactly as-is.",
+  "",
+  "HAIR: Gently neaten the existing hairstyle. Only smooth out flyaways and minor messiness. Keep the exact same hair color, length, thickness, and general style. Do NOT change the hairstyle dramatically.",
+  "",
+  "CLOTHING: Add a dark navy formal suit jacket, white dress shirt with collar, and a dark tie below the neck. Only the shoulders and upper chest should be visible.",
+  "",
+  "BACKGROUND: Clean, neutral soft gradient background. Very subtle light gray to slightly darker gray. Professional studio look.",
+  "",
+  "LIGHTING: Soft, flattering studio lighting with gentle fill. Correct any color cast from the original photo to show natural skin tones. Subtle catchlights in the eyes for a lively, professional look.",
+  "",
+  "FRAMING: Professional headshot crop - head and shoulders, face fills about 60% of frame height, centered, slight angle is acceptable for a more natural look.",
+  "",
+  "EXPRESSION: Keep the natural expression. A slight, confident, friendly smile is ideal. Eyes open, looking at camera. The photo should convey professionalism and approachability.",
   "",
   "Output one photorealistic image. No artistic filters. Generate the image now.",
 ].join("\n");
@@ -101,10 +128,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Kein Bild hochgeladen." }, { status: 400 });
     }
 
+    const photoType = (formDataIn.get("photoType") as string) || "biometric";
+    const prompt = photoType === "lebenslauf" ? LEBENSLAUF_PROMPT : BIOMETRIC_PROMPT;
+
+    console.log("[v0] Photo type:", photoType);
+
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
     const mimeType = file.type || "image/jpeg";
-    const dataUrl = "data:" + mimeType + ";base64," + base64;
 
     console.log("[v0] Image received:", Math.round(arrayBuffer.byteLength / 1024), "KB, type:", mimeType);
 
@@ -112,7 +142,7 @@ export async function POST(req: NextRequest) {
     const editForm = new FormData();
     const blob = new Blob([arrayBuffer], { type: mimeType });
     editForm.append("image", blob, "photo.jpg");
-    editForm.append("prompt", PROMPT);
+    editForm.append("prompt", prompt);
     editForm.append("model", "gpt-4o-image");
     editForm.append("size", "1024x1024");
 

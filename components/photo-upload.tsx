@@ -41,27 +41,36 @@ const photoTypeOptions: {
 ];
 
 const biometricSteps = [
-  { icon: User, label: "Gesicht wird erkannt...", duration: 7 },
-  { icon: ImageIcon, label: "Hintergrund wird entfernt...", duration: 10 },
-  { icon: Sparkles, label: "Gesichtsbehaarung wird entfernt...", duration: 10 },
-  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 12 },
-  { icon: Camera, label: "Beleuchtung wird optimiert...", duration: 8 },
-  { icon: FileCheck, label: "Biometrisches Format wird angepasst...", duration: 8 },
-  { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 5 },
+  { icon: User, label: "Gesicht wird erkannt...", duration: 12 },
+  { icon: ImageIcon, label: "Hintergrund wird entfernt...", duration: 18 },
+  { icon: Sparkles, label: "Gesichtsbehaarung wird entfernt...", duration: 18 },
+  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 20 },
+  { icon: Camera, label: "Beleuchtung wird optimiert...", duration: 15 },
+  { icon: FileCheck, label: "Biometrisches Format wird angepasst...", duration: 15 },
+  { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 22 },
 ];
 
 const lebenslaufSteps = [
-  { icon: User, label: "Gesicht wird erkannt...", duration: 7 },
-  { icon: ImageIcon, label: "Hintergrund wird angepasst...", duration: 10 },
-  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 12 },
-  { icon: Sparkles, label: "Beleuchtung wird optimiert...", duration: 10 },
-  { icon: Camera, label: "Professionelles Framing wird angepasst...", duration: 8 },
-  { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 5 },
+  { icon: User, label: "Gesicht wird erkannt...", duration: 14 },
+  { icon: ImageIcon, label: "Hintergrund wird angepasst...", duration: 18 },
+  { icon: Shirt, label: "Professionelle Kleidung wird hinzugefuegt...", duration: 22 },
+  { icon: Sparkles, label: "Beleuchtung wird optimiert...", duration: 18 },
+  { icon: Camera, label: "Professionelles Framing wird angepasst...", duration: 18 },
+  { icon: CheckCircle2, label: "Qualitaetskontrolle...", duration: 30 },
+];
+
+const waitingMessages = [
+  "Qualitaetskontrolle...",
+  "Fast fertig, noch einen Moment...",
+  "Feinschliff wird angewendet...",
+  "Dein Foto wird finalisiert...",
+  "Letzte Optimierungen...",
 ];
 
 function GenerationTimer({ steps }: { steps: typeof biometricSteps }) {
   const [elapsed, setElapsed] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
+  const [waitMsgIndex, setWaitMsgIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,8 +91,23 @@ function GenerationTimer({ steps }: { steps: typeof biometricSteps }) {
     setCurrentStep(steps.length - 1);
   }, [elapsed, steps]);
 
+  // Cycle through waiting messages when on the last step
+  const isLastStep = currentStep === steps.length - 1;
+  useEffect(() => {
+    if (!isLastStep) return;
+    const interval = setInterval(() => {
+      setWaitMsgIndex((prev) => (prev + 1) % waitingMessages.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isLastStep]);
+
   const totalDuration = steps.reduce((s, step) => s + step.duration, 0);
-  const progressPercent = Math.min((elapsed / totalDuration) * 100, 95);
+  // Asymptotic progress: moves quickly at first, then slows down and never fully stops.
+  // If API takes longer than estimated totalDuration, progress keeps creeping toward 99%.
+  const rawPercent = (elapsed / totalDuration) * 100;
+  const progressPercent = rawPercent <= 90
+    ? rawPercent
+    : 90 + (10 * (1 - Math.exp(-(rawPercent - 90) / 30)));
 
   const StepIcon = steps[currentStep].icon;
 
@@ -123,8 +147,8 @@ function GenerationTimer({ steps }: { steps: typeof biometricSteps }) {
       </div>
 
       {/* Current step label */}
-      <p className="mb-2 text-center text-base font-semibold text-foreground animate-fade-in-up">
-        {steps[currentStep].label}
+      <p className="mb-2 text-center text-base font-semibold text-foreground animate-fade-in-up" key={isLastStep ? waitMsgIndex : currentStep}>
+        {isLastStep ? waitingMessages[waitMsgIndex] : steps[currentStep].label}
       </p>
       <p className="mb-8 text-center text-sm text-muted-foreground">
         {Math.round(elapsed)} Sek. vergangen

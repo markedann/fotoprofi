@@ -26,34 +26,41 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="relative px-4 py-16 md:py-24">
+    <section id="how-it-works" className="relative px-5 py-20 md:py-28">
+      {/* Background accent */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-0 top-1/2 h-[400px] w-[300px] -translate-y-1/2 rounded-full bg-accent/[0.03] blur-[100px]" />
+      </div>
+
       <div className="mx-auto max-w-5xl">
-        <div className="mb-12 text-center">
-          <span className="mb-3 inline-block rounded-md bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
+        <div className="mb-14 text-center">
+          <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
             Anleitung
           </span>
-          <h2 className="text-balance font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+          <h2 className="text-balance font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl">
             {"So funktioniert's"}
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-base text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-lg text-base text-muted-foreground">
             In nur drei einfachen Schritten zum perfekten Passfoto.
           </p>
         </div>
 
         <div className="relative grid gap-6 md:grid-cols-3">
           {/* Connector line */}
-          <div className="pointer-events-none absolute left-0 right-0 top-12 z-0 hidden md:block">
-            <div className="mx-16 h-px border-t-2 border-dashed border-border" />
+          <div className="pointer-events-none absolute left-0 right-0 top-[3.5rem] z-0 hidden md:block">
+            <div className="mx-20 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
 
           {steps.map((item) => (
-            <div key={item.step} className="relative z-10 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
-                <item.icon className="h-7 w-7" />
+            <div key={item.step} className="group relative z-10 text-center">
+              <div className="relative mx-auto mb-5">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg group-hover:shadow-primary/20">
+                  <item.icon className="h-7 w-7" />
+                </div>
+                <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+                  {item.step}
+                </span>
               </div>
-              <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Schritt {item.step}
-              </span>
               <h3 className="mb-2 font-display text-lg font-semibold text-foreground">
                 {item.title}
               </h3>
